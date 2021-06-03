@@ -38,10 +38,10 @@ swat-pytools
 │   ├── figFiles
 │   ├── Models
 │   └── Observed
-└── src
-    ├── main
-    │   └── swat_utilities
-    └── test
+├── src
+│   └── swat_utilities
+└── tests
+
 </pre>
 
 In the `resources` directory, you must place all the necessary files for executing and calibrating SWAT, such as the model executables, zip files containing input SWAT text files (`resources/Models` directory), csv files containing observed time series (`resources/Observed` directory), and other optional files. Regarding SWAT executables, revisions 622, 670, and 681 are available for Unix in this repository, only version 622 is available for macOS.
@@ -50,7 +50,9 @@ In the `resources` directory, you must place all the necessary files for executi
 
 In this example, we are using the SWAT 622 version to run a model of the Honeyoey Creek - Pine Creek Watershed located in Michigan, US. The SWAT input text files, which normally are generated inside the `TxtInOut` folder when using ArcSWAT, are put together in a zip file that will be handled by the Python wrapper. In this case, we are using the `Honeyoy_Model.zip` file placed in the `resources/Observed` directory.
 
-We assume that a new Python script is created in the `src/main` directory. First, we import the libraries that we are going to use:
+We assume that a new Python script is created in the `test` directory. 
+
+First, we import the libraries that we are going to use:
 
 ```python
 import os
@@ -59,7 +61,7 @@ from swat_utilities.swat_config import ModelSetup
 Then, we define a variable with the path to the zip file containing the SWAT text files:
 
 ```python
-model_file_path = os.path.abspath('../../resources/Models/Honeyoy_Model.zip')
+model_file_path = os.path.abspath('../resources/Models/Honeyoy_Model.zip')
 ```
 Now, we create the model object using the `ModelSetup` class:
 
@@ -72,7 +74,7 @@ We must indicate which SWAT version we are going to use, which is the property `
 ```python
 swat_model.swat_exec_name = 'SWAT_Rev622'
 ```
-To see the executing progress when running the model, we set the property 'verbose_swat' as `True`:
+To see the execution progress when running the model, we set the property 'verbose_swat' as `True`:
 
 ```python
 swat_model.verbose_swat = True
