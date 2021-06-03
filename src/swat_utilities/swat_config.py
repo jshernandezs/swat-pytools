@@ -5,7 +5,6 @@ SWAT utilities for changing text input files and executing the model
 import os
 import platform
 import re
-import decimal
 import subprocess as sp
 import pandas as pd
 import sys
