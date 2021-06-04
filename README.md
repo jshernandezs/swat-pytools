@@ -50,7 +50,7 @@ In the `resources` directory, you must place all the necessary files for executi
 
 In this example, we are using the SWAT 622 version to run a model of the Honeyoey Creek - Pine Creek Watershed located in Michigan, US. The SWAT input text files, which normally are generated inside the `TxtInOut` folder when using ArcSWAT, are put together in a zip file that will be handled by the Python wrapper. In this case, we are using the `Honeyoy_Model.zip` file placed in the `resources/Observed` directory.
 
-We assume that a new Python script is created in the `test` directory. 
+We assume that a new Python script is created in the `tests` directory. 
 
 First, we import the libraries that we are going to use:
 
