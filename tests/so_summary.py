@@ -3,7 +3,6 @@
 Summary of single-objective calibrations in terms of ERHIs
 """
 
-import sys
 import os
 import pandas as pd
 import numpy as np
@@ -12,17 +11,13 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 # import seaborn as sns
 
-
-mainDIR = os.path.abspath('../main/')
-sys.path.insert(1, mainDIR)
-
 from swat_utilities.performance import read_obs_file
 from swat_utilities.hit import HydrologicIndex as Hi
 from swat_utilities.post_processing import heatmap
 
 
-file_dir = '../../optimal/simulations.csv'
-obs_file = '../../resources/Observed/Honeyoy.csv'
+file_dir = '../optimal/simulations.csv'
+obs_file = '../resources/Observed/Honeyoy.csv'
 dict_pm = {'KGE': ['none', 'sqrt', 'log', 'inverse'],
            'KGEp': ['none', 'sqrt', 'log', 'inverse'],
            'NSE': ['none', 'sqrt', 'log', 'rel', 'inverse'],
@@ -71,7 +66,7 @@ name_f = ['NSE_none', 'KGE_none', 'KGEp_none', 'IoA_none', 'R4MS4E_none',
           'R2_none', 'R2_sqrt', 'R2_log', 'R2_inverse',
           'NSE_rel', 'IoA_rel']
 
-output_dir = '../../figures'
+output_dir = '../figures'
 
 if not os.path.exists(output_dir):
         os.makedirs(output_dir)

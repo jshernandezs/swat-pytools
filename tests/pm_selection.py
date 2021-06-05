@@ -3,14 +3,9 @@
 Routine for selecting performance metrics based on optimization results and ERHIs replication
 """
 
-import sys
-import os
 import pandas as pd
 import numpy as np
 import datetime as dt
-
-mainDIR = os.path.abspath('../main/')
-sys.path.insert(1, mainDIR)
 
 from swat_utilities.performance import read_obs_file
 from swat_utilities.hit import HydrologicIndex as Hi
@@ -200,9 +195,9 @@ def get_ind_names(d):
 
 if __name__ == "__main__":
     
-    file_dir = '../../optimal/simulations.csv'
-    performance_file = '../../optimal/performance.csv'
-    obs_file = '../../resources/Observed/Honeyoy.csv'
+    file_dir = '../optimal/simulations.csv'
+    performance_file = '../optimal/performance.csv'
+    obs_file = '../resources/Observed/Honeyoy.csv'
     dict_pm = {'KGE': ['none', 'sqrt', 'log', 'inverse'],
                'KGEp': ['none', 'sqrt', 'log', 'inverse'],
                'NSE': ['none', 'sqrt', 'log', 'rel', 'inverse'],
