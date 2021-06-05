@@ -48,7 +48,7 @@ In the `resources` directory, you must place all the necessary files for executi
 
 ### Executing SWAT with Python
 
-In this example, we are using the SWAT 622 version to run a model of the Honeyoey Creek - Pine Creek Watershed located in Michigan, US. The SWAT input text files, which normally are generated inside the `TxtInOut` folder when using ArcSWAT, are put together into a zip file that will be handled by the Python wrapper. In this case, we are using the `Honeyoy_Model.zip` file placed into the `resources/Observed` directory.
+In this example, we are using the SWAT 622 version to run a model of the Honeyoey Creek - Pine Creek Watershed located in Michigan, US. The SWAT input text files, which normally are generated inside the `TxtInOut` folder when using ArcSWAT, are put together into a zip file that will be handled by the Python wrapper. In this case, we are using the `Honeyoy_Model.zip` file placed into the `resources/Models` directory.
 
 We assume that a new Python script is created in the `tests` directory. 
 
@@ -215,3 +215,17 @@ swat_model.hrus = [hrus1, hrus2, hrus3]
 Note that the third element in `hrus1` is an empty list, meaning that the subbasin `3` will have the parameters changed for all of its hrus. Similarly, note that `hrus3` is also an empty list, which means that all the hrus within the subbasins `10`, `11`, ..., `14` will have their parameters modified.
 
 Also note that subbasins `1` and `2` belong to both `subbasins1` and `subbasins2`. However, their corresponding lists of hrus are different under each set. This is an example of how to apply different parameter modifications to different hrus within the same subbasin.
+
+### SWAT model calibration
+
+In the `src` folder, there are Python scrips showing how to set up single- and multi-objective optimization problems using *pymoo*. 
+
+## Contact
+
+Feel free to contact me if you have any questions:
+
+J. Sebastian Hernandez-Suarez <br>
+herna505@msu.edu <br>
+Computational Ecohydrology Group (C-ECO) <br>
+Michigan State University <br>
+East Lansing, MI 48824, US 
