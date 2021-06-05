@@ -1,0 +1,4 @@
+notebooks/
+*~
+**/__pycache__
+*.Rhistory
