@@ -79,8 +79,8 @@ def run_batch(swat_model, cal_dir, params_template, processes):
 
 if __name__ == '__main__':
     
-    cal_dirs = ['../../output/Problem_0', '../../output/Problem_3']
-    model_file_path = os.path.abspath('../../resources/Models/Honeyoy_Model_val.zip')
+    cal_dirs = ['../output/Performance_based', '../output/Signature_based']
+    model_file_path = os.path.abspath('../resources/Models/Honeyoy_Model_val.zip')
     
     params_template = {'BIOMIX': [0.22, 'replace', 'mgt'],
                        'CN2': [-0.21, 'multiply', 'mgt'],
@@ -100,5 +100,5 @@ if __name__ == '__main__':
     
     simulations = main(cal_dirs, model_file_path, params_template, 8)
     
-    with open('../../output/validation.pickle', 'wb') as f:
+    with open('../output/validation.pickle', 'wb') as f:
         pickle.dump(simulations, f, pickle.HIGHEST_PROTOCOL)    

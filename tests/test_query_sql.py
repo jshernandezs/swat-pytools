@@ -1,12 +1,7 @@
 #!/usr/bin/env python3
-import sys
-import os
 import time
 import multiprocessing
 import pandas as pd
-
-main_dir = os.path.abspath('../main/')
-sys.path.insert(1, main_dir)
 
 from swat_utilities.sql_utilities import get_time_series, create_connection
 
@@ -18,8 +13,8 @@ def single_run(db_file, ext, variables, sub):
 
 def run(pool_size):
     
-    output_db = '../../resources/swat_output/Honeyoy_Model/output_sqlite.db'
-    subbasins_filename = '../../resources/csv_files/subbasins.csv'    
+    output_db = '../resources/swat_output/Honeyoey_Model/output_sqlite.db'
+    subbasins_filename = '../resources/csv_files/subbasins.csv'    
     
     subbasins = pd.read_csv(subbasins_filename, header=None).iloc[:, 0].to_list()
     var_list = [('rch', ['FLOW_OUTcms']),

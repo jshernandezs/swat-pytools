@@ -3,14 +3,10 @@
 Write SWAT txt files based on user-defined crop rotations and operations
 """
 
-import sys
 import os
 import platform
 import time
 import pandas as pd
-
-main_dir = os.path.abspath('../main/')
-sys.path.insert(1, main_dir)
 
 import swat_utilities.rotation_factory as builder
 from swat_utilities.swat_config import ModelSetup
@@ -27,11 +23,11 @@ opt5 = 1  # Select tile drainage option
 opt6 = 1  # Select filter strip option
 
 start_fs = {'MONTH': 1, 'DAY': 1, 'IYEAR': 1998}
-subbasins_filename = '../../resources/csv_files/subbasins.csv'
+subbasins_filename = '../resources/csv_files/subbasins.csv'
 
 # 2) Model settings
 
-model_file_path = os.path.abspath('../../resources/Models/SWAT_Model.zip')
+model_file_path = os.path.abspath('../resources/Models/SWAT_Model.zip')
 if platform.system() == 'Linux':
     swat_version = 'SWAT_Rev670'
 elif platform.system() == 'Darwin':

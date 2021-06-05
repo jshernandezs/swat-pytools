@@ -17,12 +17,12 @@ else:
     swat_version = None
     print('Windows version is not supported yet')
 
-swat_cal_config.model_file = os.path.abspath('../../resources/Models/Honeyoy_Model.zip')
+swat_cal_config.model_file = os.path.abspath('../resources/Models/Honeyoy_Model.zip')
 swat_cal_config.swat_exec_name = swat_version
-swat_cal_config.obs_file = os.path.abspath('../../resources/Observed/Honeyoy.csv')
+swat_cal_config.obs_file = os.path.abspath('../resources/Observed/Honeyoy_cal.csv')
 swat_cal_config.out_file = 'watout.dat'
 swat_cal_config.out_var = 'FLOWm^3/s'
-swat_cal_config.output_dir = os.path.abspath('../../output/test_KGE')
+swat_cal_config.output_dir = os.path.abspath('../output/test_KGE')
 swat_cal_config.temp_dir = '/tmp/swat_runs/KGE_none'
 swat_cal_config.temp_run_dir = '/tmp/output_swat/KGE_none'
 swat_cal_config.obj_f = {'KGE': 'none'}
@@ -46,11 +46,11 @@ swat_cal_config.cal_param = {'BIOMIX': [[0, 1], 'replace', 'mgt'],
 # Optimization routine #######################################################################
 
 # Step 1: create optimization problem object
-problem = SWATProblem(swat_cal_config, parallelization=("threads", 4))
+problem = SWATProblem(swat_cal_config, parallelization=("threads", 7))
 # Step 2: create algorithm object
 crossover = get_crossover("real_sbx", prob=0.9, eta=10)
 mutation = get_mutation("real_pm", eta=20, prob=1 / 15)
-algorithm = GA(pop_size=4,
+algorithm = GA(pop_size=100,
                crossover=crossover,
                mutation=mutation,
                eliminate_duplicates=True,
@@ -58,7 +58,7 @@ algorithm = GA(pop_size=4,
 # Step 3: create optimization object
 res = minimize(problem,
                algorithm,
-               termination=('n_gen', 3),
+               termination=('n_gen', 250),
                seed=1,
                verbose=True)
 # Step 4: report results

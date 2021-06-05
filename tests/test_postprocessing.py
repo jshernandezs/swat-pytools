@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import sys
 import os
 import pandas as pd
 import numpy as np
@@ -9,10 +8,6 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.path import Path
 import matplotlib.patches as patches
-
-mainDIR = os.path.abspath('../main/')
-sys.path.insert(1, mainDIR)
-
 from swat_utilities.performance import read_obs_file
 from swat_utilities.post_processing import Optimal, fdc
 from swat_utilities.performance import Metric
@@ -21,7 +16,7 @@ from pymoo.factory import get_decision_making
 
 
 def main(obs_file, obs_file_val, list_ind, groups, ind_dict, perf_dict, cal_dirs, max_gen, val_file, opt = [True, True, True], 
-         output_dir = '../../figures'):
+         output_dir = '../figures'):
        
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -757,8 +752,8 @@ class TaylorDiagram(object): # Taylor diagram code adapted from https://gist.git
     
 if __name__ ==  '__main__':
     
-    obs_file = os.path.abspath('../../resources/Observed/Honeyoy.csv')
-    obs_file_val = os.path.abspath('../../resources/Observed/Honeyoy_8090.csv')
+    obs_file = os.path.abspath('../resources/Observed/Honeyoy.csv')
+    obs_file_val = os.path.abspath('../resources/Observed/Honeyoy_8090.csv')
 
     list_ind = [['ma12', 'ma13', 'ma14', 'ma15', 'ma16', 'ma17', 'ma18', 'ma19', 'ma20', 'ma21', 'ma22', 'ma23'],
                 ['dl1', 'dl2', 'dl3', 'dl4', 'dl5', 'dh1', 'dh2', 'dh3', 'dh4', 'dh5', 'ml17'], ['tl1', 'th1',
@@ -795,10 +790,10 @@ if __name__ ==  '__main__':
                  'IoA': ['none', 'rel'],
                  'NSE': ['none']}
     
-    val_file = os.path.abspath('../../output/validation.pickle')
+    val_file = os.path.abspath('../output/validation.pickle')
     
     # Processing calibration results
-    cal_dirs = ['../../output/Problem_0', '../../output/Problem_3']
+    cal_dirs = ['../output/Problem_0', '../output/Problem_3']
     max_gen = 1000
     
     opt = [True, True, True]

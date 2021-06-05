@@ -5,7 +5,7 @@ import pandas as pd
 import re
 from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
 
-file_name = os.path.abspath('../../resources/csv_files/population_test.csv')
+file_name = os.path.abspath('../resources/csv_files/population_test.csv')
 
 df = pd.read_csv(file_name, header=0)
 

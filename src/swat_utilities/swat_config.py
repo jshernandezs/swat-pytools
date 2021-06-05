@@ -45,7 +45,7 @@ class ModelSetup:
         self.output_dir = '/tmp/output_swat'
         self.temp_dir = '/tmp/swat_runs'
         self.model_file = os.path.abspath(model_file)
-        self.swat_dir = os.path.abspath('../../resources')
+        self.swat_dir = os.path.abspath('../resources')
         self.swat_exec_name = 'SWAT_Rev670'
         self.new_model_name = 'New_SWAT'
         self.subbasins = []
@@ -812,7 +812,6 @@ def run_single_model(swat_model, out_file, out_var, lock, runid):
         lock.acquire()
     ind = runid.get_id()
     swat_model.new_model_name = 'RUN{:04d}'.format(ind)
-    sim_file = os.path.abspath('./fda_swat/Data/simulated{:04d}.csv'.format(ind))
     # prepare SWAT run
     swat_model.prepare_swat()
     if not isinstance(lock, int):
@@ -827,4 +826,4 @@ def run_single_model(swat_model, out_file, out_var, lock, runid):
     simulated = swat_model.sim_ts[out_var]
     # remove Run ID
     # runid.remove_id(ind)
-    return simulated, sim_file
+    return simulated

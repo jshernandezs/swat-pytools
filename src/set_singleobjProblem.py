@@ -17,9 +17,9 @@ else:
     swat_version = None
     print('Windows version is not supported yet')
 
-swat_cal_config.model_file = os.path.abspath('../../resources/Models/Honeyoy_Model.zip')
+swat_cal_config.model_file = os.path.abspath('../resources/Models/Honeyoy_Model.zip')
 swat_cal_config.swat_exec_name = swat_version
-swat_cal_config.obs_file = os.path.abspath('../../resources/Observed/Honeyoy.csv')
+swat_cal_config.obs_file = os.path.abspath('../resources/Observed/Honeyoy_cal.csv')
 swat_cal_config.out_file = 'watout.dat'
 swat_cal_config.out_var = 'FLOWm^3/s'
 swat_cal_config.verbose = False
@@ -41,13 +41,13 @@ swat_cal_config.cal_param = {'BIOMIX': [[0, 1], 'replace', 'mgt'],
 
 # Optimization routine #######################################################################
 
-metrics = ['KGE', 'KGEp', 'NSE', 'IoA', 'R2', 'ksR2', 'R4MS4E', 'fda']
-opt_transform = [True, True, True, True, True, True, False, False]
+metrics = ['KGE', 'KGEp', 'NSE', 'IoA', 'R2', 'ksR2', 'R4MS4E']
+opt_transform = [True, True, True, True, True, True, False]
 transforms = ['none', 'sqrt', 'log', 'rel', 'inverse']
 
 def call_cal_swat(config):
     # Step 1: create optimization problem object
-    problem = SWATProblem(config, parallelization=("threads", 20))
+    problem = SWATProblem(config, parallelization=("threads", 7))
     # Step 2: create algorithm object
     crossover = get_crossover("real_sbx", prob=0.9, eta=10)
     mutation = get_mutation("real_pm", eta=20, prob=1 / 15)
@@ -73,7 +73,7 @@ for i, metric in enumerate(metrics):
         if opt_transform[i] or (not opt_transform[i] and transform == 'none'):
             swat_cal_config.temp_dir = '/tmp/swat_runs/{:s}_{:s}'.format(metric, transform)
             swat_cal_config.temp_run_dir = '/tmp/output_swat/{:s}_{:s}'.format(metric, transform)
-            swat_cal_config.output_dir = os.path.abspath('../../output/test_{:s}_{:s}'.format(metric, transform))
+            swat_cal_config.output_dir = os.path.abspath('../output/test_{:s}_{:s}'.format(metric, transform))
             swat_cal_config.obj_f = {metric: transform}
             print('Running calibration using {:s} with {:s} transform...\n'.format(metric, transform))
             call_cal_swat(swat_cal_config)

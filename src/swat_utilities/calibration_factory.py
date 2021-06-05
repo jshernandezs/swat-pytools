@@ -9,7 +9,6 @@ from pymoo.model.population import Population
 from pymoo.model.algorithm import filter_optimum
 from swat_utilities import swat_config
 from swat_utilities.performance import Metric, read_obs_file
-from swat_utilities.fda_swat import MetricFda
 from swat_utilities.hit import HydrologicIndex as Hi
 from multiprocessing import Lock
 import pandas as pd
@@ -102,7 +101,7 @@ def clean_all(config):
 class SWATConfig:
 
     def __init__(self):
-        self.swat_dir = os.path.abspath('../../resources')
+        self.swat_dir = os.path.abspath('../resources')
         self.model_file = ''
         self.swat_exec_name = 'SWAT_Rev670'
         self.obs_file = ''
@@ -111,7 +110,7 @@ class SWATConfig:
         self.cal_param = {}
         self.obj_f = {'NSE': 'none'}
         self.constrs = {}
-        self.output_dir = os.path.abspath('../../output')
+        self.output_dir = os.path.abspath('../output')
         self.temp_dir = '/tmp/swat_runs'
         self.verbose = True
         self.lock = 0
@@ -214,7 +213,7 @@ def fun(x, cal_config, n_obj, n_constr):
     swat_model.param = param
 
     # swat execution
-    simulated, sim_file = swat_config.run_single_model(swat_model, cal_config.out_file, cal_config.out_var, lock, runid)
+    simulated = swat_config.run_single_model(swat_model, cal_config.out_file, cal_config.out_var, lock, runid)
 
     # objective function computation
     obs_file = cal_config.obs_file
@@ -229,9 +228,9 @@ def fun(x, cal_config, n_obj, n_constr):
 
     objs = list(obj_f.keys())
     perf_list = [obj for obj in objs if obj in ['NSE', 'KGE', 'KGEp', 'IoA', 'R2', 'koR2', 'ksR2', 'RMSE', 'R4MS4E',
-                                                'RSR', 'PBIAS', 'fda']]
+                                                'RSR', 'PBIAS']]
     t_new = [t for t, obj in zip(transforms, objs) if obj in ['NSE', 'KGE', 'KGEp', 'IoA', 'R2', 'koR2', 'ksR2', 'RMSE',
-                                                              'R4MS4E', 'RSR', 'PBIAS', 'fda']]
+                                                              'R4MS4E', 'RSR', 'PBIAS']]
     for i, obj in enumerate(perf_list):
         for transf in t_new[i]:
             if obj in ['NSE', 'KGE', 'KGEp', 'IoA', 'R2', 'koR2', 'ksR2']:
@@ -240,12 +239,6 @@ def fun(x, cal_config, n_obj, n_constr):
                 f_eval = getattr(simulation, 'get_{:s}'.format(obj.lower()))(transf.lower())
             elif obj == 'PBIAS':
                 f_eval = abs(simulation.get_pbias())
-            elif obj == 'fda':
-                rds_file = cal_config.rds_file
-                simulation.write_sim(sim_file)
-                fda_swat = MetricFda()
-                f_eval = fda_swat.fda_metric(sim_file, rds_file, opt_fast=True)
-                sp.run(['rm', sim_file])
 
             name = '{:s}_{:s}'.format(obj, transf)
             f_out[name] = f_eval
@@ -253,9 +246,9 @@ def fun(x, cal_config, n_obj, n_constr):
             idx += 1
 
     hi_list = [obj for obj in objs if obj not in ['NSE', 'KGE', 'KGEp', 'IoA', 'R2', 'koR2', 'ksR2', 'RMSE',
-                                                  'R4MS4E', 'RSR', 'PBIAS', 'fda']]
+                                                  'R4MS4E', 'RSR', 'PBIAS']]
     threshs = [t for t, obj in zip(transforms, objs) if obj not in ['NSE', 'KGE', 'KGEp', 'IoA', 'R2', 'koR2', 'ksR2', 
-                                                                    'RMSE', 'R4MS4E', 'RSR', 'PBIAS', 'fda']]
+                                                                    'RMSE', 'R4MS4E', 'RSR', 'PBIAS']]
     if len(hi_list) > 0:
         eps = np.finfo(float).eps
         observed = read_obs_file(obs_file)

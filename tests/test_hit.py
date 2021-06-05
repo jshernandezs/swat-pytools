@@ -1,16 +1,11 @@
 #!/usr/bin/env python3
-import sys
-import os
 import time
-
-main_dir = os.path.abspath('../main/')
-sys.path.insert(1, main_dir)
 
 from swat_utilities.performance import read_obs_file
 from swat_utilities.hit import HydrologicIndex as Hi
 
 # read observed time-series
-observedFile = '../../resources/Observed/Honeyoy.csv'
+observedFile = '../resources/Observed/Honeyoy.csv'
 observed = read_obs_file(observedFile)
 # Compute index of interest
 start_time = time.time()

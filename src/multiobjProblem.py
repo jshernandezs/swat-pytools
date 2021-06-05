@@ -17,12 +17,12 @@ if platform.system() == 'Linux':
 elif platform.system() == 'Darwin':
     swat_version = 'SWAT_Rev622_macOS'
 
-swat_cal_config.model_file = os.path.abspath('../../resources/Models/Honeyoy_Model.zip')
+swat_cal_config.model_file = os.path.abspath('../resources/Models/Honeyoy_Model.zip')
 swat_cal_config.swat_exec_name = swat_version
-swat_cal_config.obs_file = os.path.abspath('../../resources/Observed/Honeyoy.csv')
+swat_cal_config.obs_file = os.path.abspath('../resources/Observed/Honeyoy_cal.csv')
 swat_cal_config.out_file = 'watout.dat'
 swat_cal_config.out_var = 'FLOWm^3/s'
-swat_cal_config.output_dir = os.path.abspath('../../output/Problem_1')
+swat_cal_config.output_dir = os.path.abspath('../output/Problem_1')
 swat_cal_config.temp_dir = '/tmp/swat_runs/Problem_1'
 swat_cal_config.temp_run_dir = '/tmp/output_swat/Problem_1'
 swat_cal_config.verbose = False

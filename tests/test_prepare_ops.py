@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-import sys
-import os
-
-main_dir = os.path.abspath('../main/')
-sys.path.insert(1, main_dir)
 
 import swat_utilities.prepare_ops as prep
 

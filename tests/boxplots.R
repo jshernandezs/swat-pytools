@@ -8,7 +8,7 @@ library(gridExtra)
 
 theme_set(theme_pubclean())
 
-input_dir <- '../../figures'
+input_dir <- '../figures'
 opt_val <- T
 
 if (!opt_val){

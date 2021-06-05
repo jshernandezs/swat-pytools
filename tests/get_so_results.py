@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
-import sys
 import os
 import pandas as pd
 import numpy as np
-
-main_dir = os.path.abspath('../main/')
-sys.path.insert(1, main_dir)
 
 from swat_utilities.post_processing import Optimal
 from swat_utilities.performance import Metric, read_obs_file
@@ -13,7 +9,7 @@ from swat_utilities.performance import Metric, read_obs_file
 metrics = ['KGE', 'KGEp', 'NSE', 'IoA', 'R2', 'ksR2', 'R4MS4E']
 opt_transform = [True, True, True, True, True, True, False]
 transforms = ['none', 'sqrt', 'log', 'rel', 'inverse']
-observed_file = os.path.abspath('../../resources/Observed/Honeyoy.csv')  # full date
+observed_file = os.path.abspath('../resources/Observed/Honeyoy.csv')  # full date
 
 c = 0
 param_all = []
@@ -27,7 +23,7 @@ metric_names = ['NSE', 'RMSE', 'KGE', 'KGEp', 'RSR', 'IoA', 'R2', 'koR2', 'ksR2'
 for i, metric in enumerate(metrics):
     for transform in transforms:
         if opt_transform[i] or (not opt_transform[i] and transform == 'none'):
-            cal_dir = '../../output/Single_Obj/test_{:s}_{:s}'.format(metric, transform)
+            cal_dir = '../output/Single_Obj/test_{:s}_{:s}'.format(metric, transform)
             names.append('{:s}_{:s}'.format(metric, transform))
             # create object with optimal solutions
             swat_optimal = Optimal(cal_dir)
@@ -71,7 +67,7 @@ of_all.index = names
 sim_all.columns = names
 
 # write results to .csv files
-output_dir = os.path.abspath('../../optimal')
+output_dir = os.path.abspath('../optimal')
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 

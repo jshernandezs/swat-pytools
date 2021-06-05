@@ -3,16 +3,12 @@
 Routine for creating folders with sample files for all possible scenarios
 """
 
-import sys
 import os
 import time
 import multiprocessing
 import platform
 import subprocess as sp
 import pandas as pd
-
-main_dir = os.path.abspath('../main/')
-sys.path.insert(1, main_dir)
 
 import swat_utilities.rotation_factory as builder
 from swat_utilities.swat_config import ModelSetup
@@ -67,9 +63,9 @@ def run():
     
     processes = 20
     output_dir = '/home/sebwaymaster/Desktop/Saginaw_Project/saginaw_scenarios'
-    subbasins_filename = '../../resources/csv_files/cropland.csv'
+    subbasins_filename = '../resources/csv_files/cropland.csv'
     
-    model_file_path = os.path.abspath('../../resources/Models/Saginaw_Model_WQ.zip')
+    model_file_path = os.path.abspath('../resources/Models/Saginaw_Model_WQ.zip')
     if platform.system() == 'Linux':
         swat_version = 'SWAT_Rev670'
     elif platform.system() == 'Darwin':
