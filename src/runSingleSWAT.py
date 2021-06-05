@@ -32,7 +32,8 @@ subbasins = pd.read_csv(subbasins_filename, header=None).iloc[:, 0].to_list()
 
 # Step 2: Parameters to change
 
-params = {'BIOMIX': [0.22, 'replace', 'mgt'],
+params = {'ICALEN': [1, 'replace', 'cio'],
+          'BIOMIX': [0.22, 'replace', 'mgt'],
           'CN2': [-0.21, 'multiply', 'mgt'],
           'CANMX': [1.67, 'replace', 'hru'],
           'ESCO': [0.70, 'replace', 'hru'],
