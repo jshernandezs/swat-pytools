@@ -12,19 +12,18 @@ Par_info.max = [1,0.25,100,1,1,500,1,5000,0.2,1000,1,0.3,500,0.25,24,5];        
 Func_name = 'loglikelihood';
 
 %% Define method to use {'dream','dream_zs','dream_d','dream_dzs'}
-method = 'dream_zs';
+method = 'mtdream_zs';
 
 switch method
     case {'dream','dream_d'}
         DREAMPar.N = 10;                                                        % Number of Markov chains
-        DREAMPar.T = 5000;                                                      % Number of generations
+        DREAMPar.T = 20000;                                                     % Number of generations
     case {'dream_zs','dream_dzs'}
-        DREAMPar.N = 5;                                                         % Number of Markov chains
-        DREAMPar.T = 10000;                                                     % Number of generations
-    case {'dream_kzs'}
-        DREAMPar.N = 5;                                                         % Number of Markov chains
+        DREAMPar.N = 3;                                                         % Number of Markov chains
+        DREAMPar.T = 20000;                                                     % Number of generations
+    case {'mtdream_zs'}
+        DREAMPar.N = 3;                                                         % Number of Markov chains
         DREAMPar.T = 10000;                                                     % Number of generations        
-        DREAMPar.M = 24;                                                        % Number of archive samples for Kalman jump
 end
 
 %% Optional settings
@@ -40,4 +39,8 @@ plugin.lambda = 0.5;                                                            
 plugin.psi = 0.5;                                                               % Autocorrelation error model parameter
 
 %% Run DREAM package
-[chain,output,FX,Z,logL] = DREAM_package(method,Func_name,DREAMPar,Par_info,[],options,plugin);
+if strcmp(method, 'mtdream_zs')
+    [chain,output,fx,Z] = MTDREAM_ZS(Func_name,DREAMPar,Par_info,[],options,plugin);
+else
+    [chain,output,FX,Z,logL] = DREAM_package(method,Func_name,DREAMPar,Par_info,[],options,plugin);
+end
