@@ -88,7 +88,7 @@ swat_model.prepare_swat()
 swat_model.run_swat()
 ```
 
-`prepare_swat()` unzips the model text files, copy them with the SWAT executable to a temporal directory which can be changed with the `temp_dir` property of the model object (by default the directory is `'/tmp/swat_runs'`), and do any needed modifications to the SWAT text files. 
+`prepare_swat()` unzips the model text files, copy them with the SWAT executable to a temporal directory which can be changed with the `temp_dir` property of the model object (by default the directory is `'/tmp/swat_runs'`), and performs any needed modifications to the SWAT text files. 
 
 By default, the results are stored in the `/tmp/output_swat/New_SWAT` directory. The user can modify the output directory (i.e., `'/tmp/output_swat'`) and the model folder containing the input and output SWAT text files  (i.e., 'New_SWAT') by using the `output_dir` and `new_model_name` properties of the `swat_model` object, respectively.
 
