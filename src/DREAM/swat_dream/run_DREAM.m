@@ -1,3 +1,5 @@
+rng('default')
+
 %% Problem settings defined by user
 DREAMPar.d = 16;                           % Dimension of the problem
 DREAMPar.lik = 2;                          % Custom log-likelihood function (McInerney et al., 2018) 
@@ -34,9 +36,9 @@ options.save = 'yes';                                                           
 %% Plugin settings
 
 plugin.n_model_params = 15;
-plugin.path_to_python = '~/anaconda3/envs/swatpy/bin/python';
-plugin.lambda = 0.5;                                                            % Box-cox transformation parameter
-plugin.psi = 0.5;                                                               % Autocorrelation error model parameter
+plugin.path_to_python = '/work/herna505/anaconda3/envs/swatpy/bin/python';
+plugin.lambda = 0.2;                                                            % Box-cox transformation parameter
+plugin.psi = 0.8;                                                               % Autocorrelation error model parameter
 
 %% Run DREAM package
 if strcmp(method, 'mtdream_zs')
