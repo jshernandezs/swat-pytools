@@ -1,4 +1,4 @@
-% Script for sampling quantities of interest
+% Sampling predictions
 clc, clear, close all
 rng('default')
 
@@ -30,13 +30,15 @@ Neval = length(ParEval);
 [model, pred, obs] = pred_sim(ParEval(1, :), plugin);
 Nt = length(obs);
 
-parpool(nprocessors);
-
+% initialize output matrices
 models = zeros(Neval, Nt);
 preds = models;
 
 models(1,:) = model;
 preds(1,:) = pred;
+
+% execute model runs
+parpool(nprocessors);
 
 parfor i=2:Neval
     [models(i,:), preds(i,:)] = pred_sim(ParEval(i, :), plugin);
