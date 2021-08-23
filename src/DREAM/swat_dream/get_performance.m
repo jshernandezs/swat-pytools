@@ -1,7 +1,7 @@
 % Get performance indicators and plots
 clc, clear, close all
 
-filename = 'MTDREAM_Results/predictions.mat';
+filename = 'predictions.mat';
 load(filename)
 
 PredInt = 95; % prediction uncertainty range
@@ -24,7 +24,7 @@ for i=1:Nt
     y = preds(:, i);
     [f, x] = ecdf(y); % empirical cdf for ith time step
     Fq(i) = interp1(x(2:end),f(2:end),obs(i),'linear',0); % quantile for ith observation
-    cv(i) = std(y)/mean(y); % coef. of variation for ith time step
+    cv(i) = std(y)/obs(i); % coef. of variation for ith time step
     
     % Sort model output from low to high
     ymod = models(:, i);

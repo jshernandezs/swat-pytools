@@ -1,7 +1,7 @@
 % Get performance indicators and plots
 clc, clear, close all
 
-filename = 'MTDREAM_Results/predictions.mat';
+filename = 'predictions.mat';
 load(filename)
 
 PredInt = 95; % prediction uncertainty range

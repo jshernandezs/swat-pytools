@@ -28,10 +28,14 @@ Nt = length(ysim);
 pd = makedist('Normal','mu',0,'sigma',sigma_res);
 Wt = random(pd,1,Nt);
 
-res = 0;
+pd0 = makedist('Normal','mu',0,'sigma',sigma_res/sqrt(1 - psi^2));
+res = random(pd0);
+
 ypred = NaN(1, Nt);
 for i=1:Nt
-    res = psi*res + Wt(i);
+    if i > 1
+        res = psi*res + Wt(i);
+    end
     zpred = zsim(i) + res;
     ypred(i) = boxcoxinv(zpred, Extra.lambda); 
     
