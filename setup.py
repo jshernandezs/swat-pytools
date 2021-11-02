@@ -36,7 +36,7 @@ setup(
         "Bug Tracker": "https://github.com/jshernandezs/swat-pytools/issues",
     },
     install_requires=['autograd>=1.3', 'hvwfg>=1.0.2', 'matplotlib>=3.4',
-    'numpy>=1.15', 'pandas>=1.1', 'pymoo>=0.4.2', 'scipy>=1.1'],
+    'numpy>=1.15', 'pandas>=1.1', 'pymoo==0.4.2', 'scipy>=1.1'],
     classifiers=[
         "Intended Audience :: Science/Research",
         "Programming Language :: Python :: 3",
