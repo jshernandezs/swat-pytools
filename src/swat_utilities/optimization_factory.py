@@ -15,6 +15,7 @@ import pandas as pd
 import numpy as np
 import subprocess as sp
 import datetime as dt
+from datetime import datetime
 
 
 class Hooker:
@@ -99,10 +100,12 @@ class SWATConfig:
     def __init__(self):
         self.swat_dir = os.path.abspath('../resources')
         self.model_file = ''
+        self.agr_treshold = os.path.abspath('../resources/treshold_agr_ecdf_30.csv')
+        self.hid_treshold = os.path.abspath('../resources/treshold_hid_ecdf_30.csv')
         self.swat_exec_name = 'SWAT_Rev670'
         self.obs_file = ''
-        self.out_var_rch = ['FLOW_OUTcms']
-        self.out_var_sub = ['SWmm']
+        self.out_var_rch = ['FLOW_OUTcms', 'severity']
+        self.out_var_sub = ['SWmm', 'severity']
         self.cal_param = {}
         self.n_obj = 2
         self.output_dir = os.path.abspath('../output')
@@ -200,9 +203,35 @@ def fun(x, cal_config, n_obj):
     
     q = simulated[0]
     sm = simulated[1]
-      
-    f[0,0] = -sum([q_i['AREAkm2'] * q_i['Series'].mean() for q_i in q.values()])/sum([q_i['AREAkm2'] for q_i in q.values()])
-    f[0,1] = -sum([sm_i['AREAkm2'] * sm_i['Series'].mean() for sm_i in sm.values()])/sum([sm_i['AREAkm2'] for sm_i in sm.values()])
+
+    start_hid = ['1993-06-01 00:00:00', '1995-01-01 00:00:00', '1997-12-01 00:00:00', '2001-04-01 00:00:00', '2003-01-01 00:00:00', '2009-09-01 00:00:00',\
+        '2012-07-01 00:00:00', '2015-05-01 00:00:00']
+        
+    end_hid = ['1993-09-01 00:00:00', '1995-04-01 00:00:00', '1998-04-01 00:00:00', '2001-09-01 00:00:00', '2003-03-01 00:00:00', '2010-04-01 00:00:00',\
+        '2012-10-01 00:00:00', '2016-01-01 00:00:00']  
+  
+    start_agr = ['1993-05-01 00:00:00','1994-06-01 00:00:00','1994-11-01 00:00:00','1997-03-01 00:00:00', '2002-01-01 00:00:00','2003-04-01 00:00:00',\
+        '2003-12-01 00:00:00', '2006-11-01 00:00:00','2009-11-01 00:00:00','2012-05-01 00:00:00', '2014-07-01 00:00:00','1993-06-01 00:00:00',\
+        '1995-01-01 00:00:00', '1997-12-01 00:00:00','2001-04-01 00:00:00','2003-01-01 00:00:00', '2009-09-01 00:00:00','2012-07-01 00:00:00','2015-05-01 00:00:00']
+
+    end_agr = ['1993-09-01 00:00:00','1994-09-01 00:00:00','1995-03-01 00:00:00','1998-03-01 00:00:00', '2002-03-01 00:00:00','2003-06-01 00:00:00',\
+       '2004-05-01 00:00:00', '2007-03-01 00:00:00','2010-04-01 00:00:00','2012-10-01 00:00:00', '2016-01-01 00:00:00','1993-09-01 00:00:00',\
+       '1995-04-01 00:00:00', '1998-04-01 00:00:00','2001-09-01 00:00:00','2003-03-01 00:00:00', '2010-04-01 00:00:00','2012-10-01 00:00:00','2016-01-01 00:00:00']
+
+    date_start_hid = [datetime.strptime(date, "%Y-%m-%d %H:%M:%S") for date in start_hid]
+    date_end_hid = [datetime.strptime(date, "%Y-%m-%d %H:%M:%S") for date in end_hid]
+
+    date_start_agr = [datetime.strptime(date, "%Y-%m-%d %H:%M:%S") for date in start_agr]
+    date_end_agr = [datetime.strptime(date, "%Y-%m-%d %H:%M:%S") for date in end_agr]
+
+    factor_list_agr = [0.06,0.06,0.06,0.2,0.06,0.06,0.1,0.06,0.06,0.1,0.2]
+    factor_list_hid = [0.1,0.1,0.1,0.1,0.1,0.2,0.1,0.2]
+
+    for factor, datei, datef in zip(factor_list_hid, date_start_hid, date_end_hid):  
+        f[0,0] = factor*(sum([q_i['severity'].loc[datei:datef].sum() for q_i in q.values()]))
+    
+    for factor, datei, datef in zip(factor_list_agr, date_start_agr, date_end_agr):
+        f[0,1] = factor*(sum([sm_i['severity'].loc[datei:datef].sum() for sm_i in sm.values()]))
 
     f_out = {}
     f_out['obj_1'] = f[0,0]
@@ -223,8 +252,8 @@ def run_single_model(swat_model, out_var_rch, out_var_sub, lock, runid):
     # execute model
     swat_model.run_swat()
     # get output time series of variables of interest
-    ts2 = get_sub_output(swat_model, out_var_sub)
     ts1 = get_rch_output(swat_model, out_var_rch)
+    ts2 = get_sub_output(swat_model, out_var_sub)
     simulated = [ts1, ts2]
     # remove temporal output folders
     swat_model.remove_swat()   
@@ -237,6 +266,9 @@ def get_sub_output(model, out_var):
     max_col1 = 35
     max_col2 = 35
     ns = 10
+
+    treshold_sm_df = get_sm_drought_treshold(model)
+    treshold_group_sub = treshold_sm_df.groupby('sub')
     
     with open(output_dir) as f:
         head = [next(f) for x in range(9)]
@@ -270,10 +302,21 @@ def get_sub_output(model, out_var):
     
     output = {}
     for sub in subbasins:
+
+        n = 23
+        treshold_sub = treshold_group_sub.get_group(sub)
+        treshold_sub_se = treshold_sub['treshold']
+        treshold_sub_se = pd.concat([treshold_sub_se]*n)
+
         aux = temp.loc[temp['SUB'] == str(sub), :].copy()
         aux['YEAR'] = years
         aux.index = [dt.datetime(int(year),int(month),1) for year, month in zip(aux['YEAR'], aux['MON'])]
-        output[str(sub)] = {'AREAkm2': aux['AREAkm2'][0], 'Series': aux.loc[:, out_var]}    
+
+        treshold_sub_se.index = [dt.datetime(int(year),int(month),1) for year, month in zip(aux['YEAR'], aux['MON'])]
+        aux['treshold'] = treshold_sub_se
+        aux['severity'] = np.where(aux['SWmm']<aux['treshold'], abs(aux['SWmm'] - aux['treshold']), 0)
+
+        output[str(sub)] = {'AREAkm2': aux['AREAkm2'][0], 'Series': aux.loc[:,out_var[0]], 'severity':aux.loc[:,out_var[1]]}     
     
     return output
 
@@ -283,6 +326,9 @@ def get_rch_output(model, out_var):
     max_col1 = 37
     max_col2 = 38
     ns = 12
+
+    treshold_rc_df = get_rc_drought_treshold(model)
+    treshold_group_rch = treshold_rc_df.groupby('sub')
     
     with open(output_dir) as f:
         head = [next(f) for x in range(9)]
@@ -310,14 +356,50 @@ def get_rch_output(model, out_var):
     temp['AREAkm2'] = temp['AREAkm2'].astype(float)
     temp2 = raw.loc[raw['MON'].astype(float) > 1000, :].copy()
     years = np.repeat(np.unique(temp2['MON']), 12)
+
+    temp['sf_mm/s'] = (temp['FLOW_OUTcms'] /(temp['AREAkm2']*1000000))*1000
+    temp['sf_mm/d'] = temp['sf_mm/s']*86400
     
     subbasins = np.sort(np.unique(temp['RCH']).astype(int))
     
     output = {}
     for sub in subbasins:
+
+        n = 23
+        treshold_rch = treshold_group_rch.get_group(sub)
+        treshold_rch_se = treshold_rch['treshold']
+        treshold_rch_se = pd.concat([treshold_rch_se]*n)
+    
         aux = temp.loc[temp['RCH'] == str(sub), :].copy()
         aux['YEAR'] = years
         aux.index = [dt.datetime(int(year),int(month),1) for year, month in zip(aux['YEAR'], aux['MON'])]
-        output[str(sub)] = {'AREAkm2': aux['AREAkm2'][0], 'Series': aux.loc[:, out_var]}    
+
+        treshold_rch_se.index = [dt.datetime(int(year),int(month),1) for year, month in zip(aux['YEAR'], aux['MON'])]
+        aux['treshold'] = treshold_rch_se
+        aux['severity'] = np.where(aux['sf_mm/d']<aux['treshold'], abs(aux['sf_mm/d'] - aux['treshold']), 0)
+
+        output[str(sub)] = {'AREAkm2': aux['AREAkm2'][0], 'Series': aux.loc[:, out_var[0]], 'severity':aux.loc[:,out_var[1]]}     
     
     return output
+
+def get_sm_drought_treshold(model):
+    
+    treshold_dir_sm = model.agr_treshold
+    col_names = ['gis','month','treshold','sub','drop']
+    treshold_sm = open(treshold_dir_sm)
+
+    treshold_sm_df = pd.read_csv(treshold_sm, names = col_names, delimiter= ',', skiprows=1)
+    treshold_sm_df['sub'] = treshold_sm_df['sub'].astype(int)
+    
+    return treshold_sm_df
+
+def get_rc_drought_treshold(model):
+  
+    treshold_dir_rc = model.hid_treshold
+    col_names = ['sub','month','treshold','drop1','drop2']
+    treshold_rc = open(treshold_dir_rc)
+
+    treshold_rc_df = pd.read_csv(treshold_rc, names = col_names, delimiter= ',', skiprows=1)
+    treshold_rc_df['sub'] = treshold_rc_df['sub'].astype(int)
+    
+    return treshold_rc_df
