@@ -45,6 +45,8 @@ class ModelSetup:
         self.output_dir = '/tmp/output_swat'
         self.temp_dir = '/tmp/swat_runs'
         self.model_file = os.path.abspath(model_file)
+        self.agr_treshold = ''
+        self.hid_treshold = ''
         self.swat_dir = os.path.abspath('../resources')
         self.swat_exec_name = 'SWAT_Rev670'
         self.new_model_name = 'New_SWAT'
@@ -132,7 +134,7 @@ class ModelSetup:
         ops_table = self.ops_table
         subbasins_ops = self.subbasins_ops
         hrus_ops = self.hrus_ops
-        
+
         # create output directory if it does not exist
 
         try:
@@ -155,7 +157,7 @@ class ModelSetup:
             os.makedirs(model_dir_file)
 
         sp.run(['unzip', input_dir_file, '-d', model_dir_file], stdout=sp.DEVNULL, stderr=sp.DEVNULL, check=True)
-        
+
         if drainmod:
             update_txt(model_dir_file)
 
@@ -173,8 +175,8 @@ class ModelSetup:
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
 
-        # write SWAT input text files        
-        write_new_files(param, subbasins, hrus, model_dir_file, output_dir)        
+        # write SWAT input text files
+        write_new_files(param, subbasins, hrus, model_dir_file, output_dir)
         write_mgt_tables(mgt_table, 'mgt', subbasins_mgt, hrus_mgt, output_dir)
         write_mgt_tables(ops_table, 'ops', subbasins_ops, hrus_ops, output_dir)
 
@@ -191,7 +193,7 @@ class ModelSetup:
             model_dir = directory for the SWAT TxtInOut folder
             swat_exec_name = name of SWAT executable
         """
-        # get attributes from SWAT configuration object  
+        # get attributes from SWAT configuration object
 
         swat_exec_name = self.swat_exec_name
         model_dir = self.run_output_dir
@@ -215,7 +217,7 @@ class ModelSetup:
         if len(model_dir) == 0:
             print('Model folder was not found...')
         else:
-            # remove SWAT model files from directory            
+            # remove SWAT model files from directory
             sp.run(['rm', '-rf', model_dir], check=True)
 
     def read_output(self):
@@ -452,7 +454,7 @@ def replace_line(line, value, method, ext, num_format):
 
             if is_int(num): # determine number format since num_format is not provided
                 part0 = '{:14d}'.format(int(new_value))
-            elif is_float(num):  
+            elif is_float(num):
                 nd = 6 #abs(decimal.Decimal(num).as_tuple().exponent)
                 part0 = '{:14.{}f}'.format(new_value, nd)
             else:
@@ -494,7 +496,7 @@ def replace_line(line, value, method, ext, num_format):
             new_value = value * float(num)
         elif method == 'add':
             new_value = value + float(num)
-        
+
         if is_int(num):
             part0 = '{:16d}'.format(int(new_value))
         elif is_float(num):
@@ -575,7 +577,7 @@ def write_ext_files(param_df, dir_list, subbasins, hrus, exts, input_dir, output
                                     break
                                 else:
                                     c = c + 1
-                    
+
                     new_line = replace_line(data[c],
                                            param[param_name]['value'],
                                            param[param_name]['method'],
@@ -588,14 +590,14 @@ def write_ext_files(param_df, dir_list, subbasins, hrus, exts, input_dir, output
 
 
 def prepare_subs_hrus(dir_list, subs, hrus):
-    # get all subbasins and hrus    
+    # get all subbasins and hrus
     sub_list, hru_list = get_all_subs_hrus(dir_list)
     # complete subs and hrus lists if necessary
     if len(subs) == 0:
         subs = [list(sub_list)]
         hrus = [list(hru_list)]
-    else:        
-        subs = [sub_i if len(sub_i) > 0 else list(sub_list) for sub_i in subs]        
+    else:
+        subs = [sub_i if len(sub_i) > 0 else list(sub_list) for sub_i in subs]
         if len(hrus) == 0:
             hrus = list(hrus)
             for sub_i in subs:
@@ -629,7 +631,7 @@ def write_new_files(param_all, subs, hrus, input_dir, output_dir):
                 'keyname_i' is the ith string with the SWAT name of the ith parameter to be modified
                 [list_i] is the ith list of three elements defining the inputs 'value','method', and 'ext' of the function 'replaceLine'
         input_dir = directory for the SWAT TxtInOut folder to be modified
-        output_dir = output directory where the new text files will be written 
+        output_dir = output directory where the new text files will be written
     """
     if type(param_all) == dict:
         param_all = [param_all]
@@ -699,8 +701,8 @@ def write_mgt_tables(mgt_tables, ext, subs, hrus, output_dir):
             break
         else:
             write_mgt_files(mgt_table, ext, dir_list, sub, hru, output_dir)
-        
-        
+
+
 # set of definitions for tracking back draining subbasins using .fig files
 
 def is_empty_list(inflow, ref):
@@ -748,53 +750,53 @@ def subbasin_root(inflow, subbasin_list, route_list, add_list, subbasins):
 
 
 def update_txt(input_dir):
-    
+
     file = 'basins.bsn'
     lines = {'r2adj': [1, ' R2ADJ: Curve number retention parameter adjust factor\n', '{:16d}'],
              'sstmaxd_bsn': [0.0, ' SSTMAXD_BSN: Static maximum depressional storage (mm)\n', '{:16.2f}'],
              'ismax': [1, ' ISMAX: 1 = Dynamic sstmaxd as a function of random roughness 0 = read from .bsn or .sdr\n', '{:16d}'],
              'iroutunit': [0, ' IROUTUNIT: \n', '{:16d}']}
-    
+
     new_lines = ['{part1}    |{part2}'.format(part1=x[2].format(x[0]), part2=x[1]) for _, x in lines.items()]
-    
+
     with open(os.path.abspath(input_dir + '/' + file), 'r', encoding='ISO-8859-1') as f:
-        data = f.readlines() + new_lines        
+        data = f.readlines() + new_lines
 
     with open(os.path.abspath(input_dir + '/' + file), "w") as f:
         f.writelines(data)
-    
+
     dir_list = os.listdir(input_dir)
     files = [x for x in dir_list if (x.endswith('.{}'.format('sdr')) and not x.startswith('output'))]
     lines = {'sstmaxd': [0.0, ' SSTMAXD: Static maximum depressional storage (mm)\n', '{:10.2f}']}
     new_lines = ['{part1}    |{part2}'.format(part1=x[2].format(x[0]), part2=x[1]) for _, x in lines.items()]
-    
+
     for file in files:
-        
+
         with open(os.path.abspath(input_dir + '/' + file), 'r', encoding='ISO-8859-1') as f:
-            data = f.readlines() + new_lines        
+            data = f.readlines() + new_lines
 
         with open(os.path.abspath(input_dir + '/' + file), "w") as f:
             f.writelines(data)
 
 
 def write_mgt_files(mgt_table, ext, dir_list, subbasins, hrus, output_dir):
-    
+
     # build reference lists of hru codes
     hru_ref = ['{:05d}{:04d}'.format(x, y) for i, x in enumerate(subbasins) for y in hrus[i]]
-    
+
     # create list of files to change
     files = ['{part1}.{part2}'.format(part1=x, part2=ext) for x in hru_ref]
-    
+
     if ext == 'mgt':
         table = mgt_table.op_sched
         ind = 30
     elif ext == 'ops':
         table = mgt_table.schedule
         ind = 1
-    
+
     table = [x + '\n' for x in table]
-    
-    for file in files:        
+
+    for file in files:
         with open(os.path.abspath(output_dir + '/' + file), 'r', encoding='ISO-8859-1') as f:
             data = f.readlines()
             del data[ind:]
@@ -802,8 +804,8 @@ def write_mgt_files(mgt_table, ext, dir_list, subbasins, hrus, output_dir):
 
         with open(os.path.abspath(output_dir + '/' + file), "w") as f:
             f.writelines(data)
-            
-      
+
+
 # set of functions for obtaining pre-defined model evaluations
 
 def run_single_model(swat_model, out_file, out_var, lock, runid):
