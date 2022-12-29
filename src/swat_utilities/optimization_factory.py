@@ -5,10 +5,10 @@ import os
 import math
 import csv
 import autograd.numpy as anp
-from pymoo.model.problem import Problem
-from pymoo.model.individual import Individual
-from pymoo.model.population import Population
-from pymoo.model.algorithm import filter_optimum
+from pymoo.core.problem import Problem
+from pymoo.core.individual import Individual
+from pymoo.core.population import Population
+from pymoo.util.optimum import filter_optimum
 from swat_utilities import swat_config
 import pandas as pd
 import numpy as np

@@ -7,7 +7,7 @@ from SWAT
 
 import os
 import time
-from pymoo.algorithms.unsga3 import UNSGA3
+from pymoo.algorithms.moo.unsga3 import UNSGA3
 from pymoo.factory import get_sampling, get_crossover, get_mutation, get_reference_directions
 from pymoo.optimize import minimize
 from swat_utilities.optimization_factory import SWATConfig, SWATProblem, my_callback
@@ -58,20 +58,22 @@ swat_model.cal_param = {'POT_FR': [[0, 0.3], 'replace', 'hru'],
 seed = 12345     # Seed number (for reproducibility)
 n_obj = 2        # Number of objective functions
 nparams = 15     # Number of decision variables
-nprocesses = 100 # Number of processes to run in parallel
-pop_size = 7   # Population size
-nmaxgen = 2    # Maximum number of generations (stopping criteria)
+pop_size = 7     # Population size
+nmaxgen = 2      # Maximum number of generations (stopping criteria)
+opt = 'local'    # Whether the work will be submitted locally or to an HPC
 
 # Step 0: set cluster configuration
-#dask.config.set({'distributed.scheduler.allowed-failures': 50})
-#cluster = SLURMCluster(cores=1, memory='10G', queue='serc',
-#                       walltime='00:30:00', processes=1,
-#                       extra=["--lifetime", "25m",
-#                              "--lifetime-stagger", "4m"])
-#cluster.adapt(minimum_jobs=4, maximum_jobs=nprocesses)
-#client = Client(cluster)
 
-client = Client(processes=False)
+if opt == 'local':
+    client = Client(processes=False)
+else if opt == 'hpc':
+    dask.config.set({'distributed.scheduler.allowed-failures': 50})
+    cluster = SLURMCluster(cores=1, memory='5G', queue='serc',
+                           walltime='00:30:00', processes=1,
+                           worker_extra_args=["--lifetime", "25m",
+                                              "--lifetime-stagger", "4m"])
+    cluster.adapt(minimum_jobs=4, maximum_jobs=pop_size)
+    client = Client(cluster)
 
 # Step 1: create optimization problem object
 swat_model.n_obj = n_obj
