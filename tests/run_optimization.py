@@ -66,7 +66,7 @@ opt = 'local'    # Whether the work will be submitted locally or to an HPC
 
 if opt == 'local':
     client = Client(processes=False)
-else if opt == 'hpc':
+elif opt == 'hpc':
     dask.config.set({'distributed.scheduler.allowed-failures': 50})
     cluster = SLURMCluster(cores=1, memory='5G', queue='serc',
                            walltime='00:30:00', processes=1,

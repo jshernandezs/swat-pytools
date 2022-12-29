@@ -25,7 +25,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="swat-pytools",
-    version="0.0.1",
+    version="0.0.2",
     author="J. Sebastian Hernandez-Suarez",
     author_email="herna505@msu.edu",
     description="A Python wrapper for executing and calibrating SWAT",
