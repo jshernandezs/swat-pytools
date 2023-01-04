@@ -232,11 +232,14 @@ def fun(x, cal_config, n_obj, ind):
     factor_list_agr = [0.06,0.06,0.06,0.2,0.06,0.06,0.1,0.06,0.06,0.1,0.2]
     factor_list_hid = [0.1,0.1,0.1,0.1,0.1,0.2,0.1,0.2]
 
+    f1 = 0
+    f2 = 0
+
     for factor, datei, datef in zip(factor_list_hid, date_start_hid, date_end_hid):
-        f1 = factor*(sum([q_i['severity'].loc[datei:datef].sum() for q_i in q.values()]))
+        f1 = f1 + factor*(sum([q_i['severity'].loc[datei:datef].sum() for q_i in q.values()]))
 
     for factor, datei, datef in zip(factor_list_agr, date_start_agr, date_end_agr):
-        f2 = factor*(sum([sm_i['severity'].loc[datei:datef].sum() for sm_i in sm.values()]))
+        f2 = f2 + factor*(sum([sm_i['severity'].loc[datei:datef].sum() for sm_i in sm.values()]))
 
     f = [f1,f2]
     f_out = {}
