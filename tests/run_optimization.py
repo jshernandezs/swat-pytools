@@ -55,12 +55,13 @@ swat_model.cal_param = {'POT_FR': [[0, 0.3], 'replace', 'hru'],
 # OPTIMIZATION ROUTINE #################################################################################################
 
 # Optimization settings
-seed = 12345     # Seed number (for reproducibility)
-n_obj = 2        # Number of objective functions
-nparams = 15     # Number of decision variables
-pop_size = 7     # Population size
-nmaxgen = 2      # Maximum number of generations (stopping criteria)
-opt = 'local'    # Whether the work will be submitted locally or to an HPC
+seed = 12345       # Seed number (for reproducibility)
+n_obj = 2          # Number of objective functions
+nparams = 15       # Number of decision variables
+pop_size = 7       # Population size
+nmaxgen = 2        # Maximum number of generations (stopping criteria)
+opt = 'local'      # Whether the work will be submitted locally or to an HPC
+partition = 'serc' # Name of the HPC partition where workers will be deployed
 
 # Step 0: set cluster configuration
 
@@ -68,7 +69,7 @@ if opt == 'local':
     client = Client(processes=False)
 elif opt == 'hpc':
     dask.config.set({'distributed.scheduler.allowed-failures': 50})
-    cluster = SLURMCluster(cores=1, memory='5G', queue='serc',
+    cluster = SLURMCluster(cores=1, memory='5G', queue=partition,
                            walltime='00:30:00', processes=1,
                            worker_extra_args=["--lifetime", "25m",
                                               "--lifetime-stagger", "4m"])
