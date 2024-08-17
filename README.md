@@ -1,4 +1,4 @@
-# SWAT-pytools
+# SWAT-pytools-optimisation
 
 A Python wrapper for executing and calibrating the [Soil and Water Assessment Tool (SWAT)](https://swat.tamu.edu/) in Unix/macOS systems. A module for computing the 171 hydrologic indices reported by Henriksen et al. (2006) and the Magnificent Seven indices proposed by Archfield et al. (2014) is also included here. For single- and multi-objective calibration, we use the [pymoo](https://pymoo.org/) framework.
 
