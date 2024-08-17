@@ -2,6 +2,7 @@
 """
 SWAT utilities for changing text input files and executing the model
 """
+from multiprocessing import Value
 import os
 import platform
 import re
@@ -9,6 +10,7 @@ import subprocess as sp
 import pandas as pd
 import sys
 import datetime as dt
+import autograd.numpy as anp
 
 
 class RunID:
@@ -45,7 +47,7 @@ class ModelSetup:
         self.output_dir = '/tmp/output_swat'
         self.temp_dir = '/tmp/swat_runs'
         self.model_file = os.path.abspath(model_file)
-        self.agr_treshold = ''
+        self.soils_awc = ''
         self.hid_treshold = ''
         self.swat_dir = os.path.abspath('../resources')
         self.swat_exec_name = 'SWAT_Rev670'
@@ -118,7 +120,8 @@ class ModelSetup:
 
     def prepare_swat(self):
         # get attributes from SWAT configuration object
-        param = self.param
+        pddm_param = self.pdmm_param
+        spatial_unit_opt = self.spatial_unit
         subbasins = self.subbasins
         hrus = self.hrus
         output_dir = self.output_dir
@@ -134,7 +137,7 @@ class ModelSetup:
         ops_table = self.ops_table
         subbasins_ops = self.subbasins_ops
         hrus_ops = self.hrus_ops
-
+        
         # create output directory if it does not exist
 
         try:
@@ -176,9 +179,9 @@ class ModelSetup:
             os.makedirs(output_dir)
 
         # write SWAT input text files
-        write_new_files(param, subbasins, hrus, model_dir_file, output_dir)
-        write_mgt_tables(mgt_table, 'mgt', subbasins_mgt, hrus_mgt, output_dir)
-        write_mgt_tables(ops_table, 'ops', subbasins_ops, hrus_ops, output_dir)
+        write_new_files(pddm_param, spatial_unit_opt, subbasins, hrus, model_dir_file, output_dir)
+        #write_mgt_tables(mgt_table, 'mgt', subbasins_mgt, hrus_mgt, output_dir)
+        #write_mgt_tables(ops_table, 'ops', subbasins_ops, hrus_ops, output_dir)
 
         # remove SWAT model files from temporal directory
         sp.run(['rm', '-rf', model_dir_file], check=True)
@@ -333,13 +336,13 @@ def get_all_subs_hrus(dir_list):
     return sub_list, hru_list
 
 
-def sort_subs_hrus(subs, hrus, params):
+""" def sort_subs_hrus(subs, hrus, params):
     ind = [i for i, _ in sorted(enumerate(subs), key=lambda x: len(x[1]), reverse=True)]
     subs2 = [subs[i] for i in ind]
     hrus2 = [hrus[i] for i in ind]
     params2 = [params[i] for i in ind]
 
-    return subs2, hrus2, params2
+    return subs2, hrus2, params2 """
 
 
 def simplify_subs(subs, hrus):  # UNUSED DEFINITION
@@ -396,7 +399,6 @@ def replace_line(line, value, method, ext, num_format):
     output(s):
         new_line = string containing the original line with values modified according to the inputs 'value' and 'method'
     """
-
     if (ext == 'sol') | (ext == 'chm'):  # especial case for soil properties
         parts = line.split(':')
         num = parts[1].strip()
@@ -510,15 +512,25 @@ def replace_line(line, value, method, ext, num_format):
     return new_line
 
 
-def write_ext_files(param_df, dir_list, subbasins, hrus, exts, input_dir, output_dir):
+def write_ext_files(pddm_param, hru_sub_list, spatial_unit_df, soil_group_df, dir_list, input_dir, output_dir):
     # build reference lists of subbasin and hru codes
-    sub_ref = ['{:05d}0000'.format(x) for x in subbasins]
-    hru_ref = ['{:05d}{:04d}'.format(x, y) for i, x in enumerate(subbasins) for y in hrus[i]]
+    sub_ref_1 = ['{:05d}0000'.format(x) for x in hru_sub_list[668:]]
+    hru_sub_list[668:] = sub_ref_1
+    spatial_unit_df.index = hru_sub_list
 
-    for ext in exts:
-        # get files in input directory with extension '.ext'
-        files_all = [x for x in dir_list if (x.endswith('.{}'.format(ext)) and not x.startswith('output'))]
-        param = param_df.loc[(param_df.ext == ext)].to_dict(orient='index')
+    ext_list = []
+    for pdmm in pddm_param.values():
+        ext = pdmm[-1]
+        ext_list.append(ext)
+ 
+    for i, ext, pdmm in zip(range(len(ext_list)), ext_list, pddm_param.values()):
+        spatial_unit = spatial_unit_df.loc[spatial_unit_df[i]==1]
+        spatial_unit_alloc = spatial_unit.index.tolist()
+
+        files = [spatial_unit +'.'+ ext for spatial_unit in spatial_unit_alloc]
+        param_names = list(pdmm[0])
+        soil_group_selected = soil_group_df[soil_group_df.index.isin(spatial_unit_alloc)]
+
         n_line = []
         txtformat = []
 
@@ -540,7 +552,7 @@ def write_ext_files(param_df, dir_list, subbasins, hrus, exts, input_dir, output
             var_list = []
 
         # create list of files to change
-        files_all.sort()
+        """ files_all.sort()
 
         if len(files_all) > 1:
             crit = int(files_all[0][8])
@@ -549,14 +561,15 @@ def write_ext_files(param_df, dir_list, subbasins, hrus, exts, input_dir, output
             else:
                 files = ['{part1}.{part2}'.format(part1=x, part2=ext) for x in hru_ref]
         else:
-            files = files_all  # this is the case of .bsn and .wwq
+            files = files_all  # this is the case of .bsn and .wwq """
 
         # modify list of files
         for file in files:
+            print(file)
             with open(os.path.abspath(input_dir + '/' + file), 'r', encoding='ISO-8859-1') as f:
                 data = f.readlines()
-                param_names = list(param.keys())
-                for param_name in param_names:
+                print(data)
+                for param_name, i  in zip(param_names, range(len(param_names))):
                     c = 0
                     if var_list:
                         ind = [i for i, x in enumerate(var_list) if param_name in x][0]
@@ -577,14 +590,46 @@ def write_ext_files(param_df, dir_list, subbasins, hrus, exts, input_dir, output
                                     break
                                 else:
                                     c = c + 1
+                    if (ext == 'mgt'):
+                        c = 10
+                        cn_arr = anp.array(pdmm[1])
+                        hru_soil_group = soil_group_selected.loc[file[:-4]][1]
 
-                    new_line = replace_line(data[c],
-                                           param[param_name]['value'],
-                                           param[param_name]['method'],
-                                           param[param_name]['ext'],
+                        if hru_soil_group == 'A':
+                            new_line = replace_line(data[c],
+                                           cn_arr[0],
+                                           pdmm[2],
+                                           pdmm[3],
                                            num_format)
+                            
+                        if hru_soil_group == 'B':
+                            new_line = replace_line(data[c],
+                                           cn_arr[1],
+                                           pdmm[2],
+                                           pdmm[3],
+                                           num_format)
+                            
+                        if hru_soil_group == 'C':
+                            new_line = replace_line(data[c],
+                                           cn_arr[2],
+                                           pdmm[2],
+                                           pdmm[3],
+                                           num_format)
+                            
+                        if hru_soil_group == 'D':
+                            new_line = replace_line(data[c],
+                                           cn_arr[3],
+                                           pdmm[2],
+                                           pdmm[3],
+                                           num_format)                          
+                    else:
+                        new_line = replace_line(data[c],
+                                           pdmm[1][i],
+                                           pdmm[2][i],
+                                           pdmm[3],
+                                           num_format)
+                    print(c)
                     data[c] = new_line
-
             with open(os.path.abspath(output_dir + '/' + file), "w") as f:
                 f.writelines(data)
 
@@ -622,22 +667,27 @@ def prepare_subs_hrus(dir_list, subs, hrus):
     return subs, hrus
 
 
-def write_new_files(param_all, subs, hrus, input_dir, output_dir):
+def write_new_files(pddm_param, spatial_unit_opt, subs, hrus, input_dir, output_dir):
     """Write new SWAT text input files based on a list of parameters to be changed.
     input(s):
         param_all = dictionary containing a set of n parameters to be modified. The format is as follows:
-            {'key_name_1':[list_1], ..., 'key_name_n':[list_n]}
+            {'key_name_1':[list_1], ..., 'key_name_n':[list_n]}param_all
             where:
                 'keyname_i' is the ith string with the SWAT name of the ith parameter to be modified
                 [list_i] is the ith list of three elements defining the inputs 'value','method', and 'ext' of the function 'replaceLine'
         input_dir = directory for the SWAT TxtInOut folder to be modified
         output_dir = output directory where the new text files will be written
     """
+    """ exts = []
+    for v in param_all.values():
+        ext = v[-1]
+        exts.append(ext)
+
     if type(param_all) == dict:
         param_all = [param_all]
 
     if (len(param_all) < len(subs)) and (len(param_all) != 0 and len(param_all) != 1):
-        sys.exit('List of parameters must have the same length as subbasins list or be empty')
+        sys.exit('List of parameters must have the same length as subbasins list or be empty') """
 
     dir_list = os.listdir(input_dir)
 
@@ -645,7 +695,7 @@ def write_new_files(param_all, subs, hrus, input_dir, output_dir):
     subs, hrus = prepare_subs_hrus(dir_list, subs, hrus)
     param_list = []
 
-    if len(param_all) < len(subs):
+    """ if len(param_all) < len(subs):
         if len(param_all) == 1:
             param_list = [param_all[0] for _ in subs]
         elif len(param_all) == 0:
@@ -653,19 +703,18 @@ def write_new_files(param_all, subs, hrus, input_dir, output_dir):
     elif (len(param_all) > 1) and (len(param_all) > len(subs)):
         param_list = [param_all[i] for i, _ in enumerate(subs)]
     else:
-        param_list = list(param_all)
+        param_list = list(param_all) """
+    no_sub = 100
+    spatial_unit_df = pd.DataFrame.from_dict(spatial_unit_opt, orient = 'index')  
+    
+    soil_group_df = pd.DataFrame(spatial_unit_df[1])
+    soil_group_df = soil_group_df.iloc[:-no_sub] # No subbasins incluidas para la optimisation
 
-    # sort param, subs and hrus according to size of subs
-    subs, hrus, param_list = sort_subs_hrus(subs, hrus, param_list)
-
-    for i, sub in enumerate(subs):
-        hru = hrus[i]
-        param = param_list[i]
-        param_df = pd.DataFrame.from_dict(param,
-                                          orient='index',
-                                          columns=['value', 'method', 'ext'])
-        exts = param_df.ext.unique().tolist()
-        write_ext_files(param_df, dir_list, sub, hru, exts, input_dir, output_dir)
+    hru_sub_list = spatial_unit_df.index.values.tolist()
+    spatial_unit_df = pd.DataFrame(spatial_unit_df[0].to_list())
+    #sort param, subs and hrus according to size of subs
+    #subs, hrus, param_list = sort_subs_hrus(subs, hrus, param_list)
+    write_ext_files(pddm_param, hru_sub_list, spatial_unit_df, soil_group_df, dir_list, input_dir, output_dir)
 
 
 def write_mgt_tables(mgt_tables, ext, subs, hrus, output_dir):

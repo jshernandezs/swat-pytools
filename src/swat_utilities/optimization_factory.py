@@ -11,10 +11,8 @@ from pymoo.core.population import Population
 from pymoo.util.optimum import filter_optimum
 from swat_utilities import swat_config
 import pandas as pd
-import numpy as np
 import subprocess as sp
-import datetime as dt
-from datetime import datetime
+
 
 
 class Hooker:
@@ -62,10 +60,13 @@ class Hooker:
                 x, f = opt.X.reshape(1, -1), opt.F.reshape(1, -1)
             else:
                 x, f = None, None
-
-            df4 = pd.DataFrame(x, columns=df2.columns)
+            
+            x_g = []
+            for array in x:
+                x_i = [array[i:i + 7] for i in range(0, len(array), 7)]
+                x_g.append(x_i)
+            df4 = pd.DataFrame(x_g, columns=df2.columns)
             df5 = pd.DataFrame(f, columns=df3.columns[0:n_obj])
-
             filename4 = 'opt_parameters_gen{:04d}.csv'.format(n_gen)
             filename5 = 'opt_objs_gen{:04d}.csv'.format(n_gen)
 
@@ -98,14 +99,23 @@ class SWATConfig:
     def __init__(self):
         self.swat_dir = os.path.abspath('../resources')
         self.model_file = ''
-        self.agr_treshold = os.path.abspath('../resources/csv_files/treshold_agr_ecdf_30.csv')
-        self.hid_treshold = os.path.abspath('../resources/csv_files/treshold_hid_ecdf_30.csv')
+        self.simulation_months = os.path.abspath('../resources/csv_files/cienaga_simulation_months_hru.csv.csv')
+        self.soils_awc = os.path.abspath('../resources/csv_files/cienaga_awc_soils.csv')
+        self.hid_treshold = os.path.abspath('../resources/csv_files/cienaga_hid_dro_treshold.csv')
+        self.opt_hrus = os.path.abspath('../resources/csv_files/cienaga_hru_opt.csv')
+        self.opt_subs = os.path.abspath('../resources/csv_files/cienaga_sub_opt.csv')
+        self.loc_const_1 = os.path.abspath('../resources/csv_files/cienaga_loc_const.csv')
+
         self.swat_exec_name = 'SWAT_Rev670'
         self.obs_file = ''
-        self.out_var_rch = ['FLOW_OUTcms', 'severity']
-        self.out_var_sub = ['SWmm', 'severity']
-        self.cal_param = {}
+        self.out_var_agr = ['sw_mm', 'sw_awc']
+        self.out_var_hid = ['q_mm/d', 'q_mm/s']
+        self.spatial_units = 933
+        self.results_years = 32
+        self.pdmm = 7
+        self.pdmm_param = {}
         self.n_obj = 2
+        self.n_const = 1
         self.output_dir = os.path.abspath('../output')
         self.temp_dir = '/tmp/swat_runs'
         self.verbose = True
@@ -129,21 +139,23 @@ class SWATConfig:
 class SWATProblem(Problem):
 
     def __init__(self, cal_config, client=None, **kwargs):
-        param = cal_config.cal_param
-        n_obj = cal_config.n_obj
 
-        xl = [param[x][0][0] for x in param.keys()]
-        xu = [param[x][0][1] for x in param.keys()]
+        n_spatial_units = cal_config.spatial_units
+        n_pdmm = cal_config.pdmm
+        n_obj = cal_config.n_obj
+        n_const = cal_config.n_const
 
         if client is None:
             ee = True
         else:
             ee = False
 
-        super().__init__(n_var=len(xl),
+        super().__init__(n_var=n_spatial_units*n_pdmm,
                          n_obj=n_obj,
-                         xl=anp.array(xl),
-                         xu=anp.array(xu),
+                         n_constr=n_const,
+                         xl=0.0,
+                         xu=1.0,
+                         vtype=int,
                          evaluation_of=['F'],
                          elementwise_evaluation=ee,
                          **kwargs)
@@ -152,28 +164,30 @@ class SWATProblem(Problem):
         self.client = client
 
     def _evaluate(self, X, out, *args, **kwargs):
+
         n_obj = self.n_obj
         cal_config = self.cal_config
         client = self.client
-
         inputs = [[X[k] for k in range(len(X))],
                   [cal_config for k in range(len(X))],
                   [n_obj for k in range(len(X))],
                   [k for k in range(len(X))]]
+        
 
         if client is not None:
             jobs = client.map(fun, *inputs)
             results = client.gather(jobs)
-            f, f_out, param, simulated = zip(*results)
+            f, f_out, g, spatial_unit_opt = zip(*results)
 
         else:
-            f, f_out, param, simulated = fun(X, cal_config, n_obj, 1)
+            f, f_out, g, spatial_unit_opt = fun(X, cal_config, n_obj, 1)
 
         out["F"] = anp.array(f)
+        out["G"] = anp.array(g)
 
         # update hooker
         lib = Hooker()
-        lib.add_sim(f_out, param)
+        lib.add_sim(f_out, spatial_unit_opt)
         lib.set_output_dir(cal_config.output_dir)
 
 def my_callback(algorithm):
@@ -182,73 +196,86 @@ def my_callback(algorithm):
     lib.print(algorithm)
     lib.clear_hooker()
 
+
 def fun(x, cal_config, n_obj, ind):
+
     swat_model = swat_config.ModelSetup(cal_config.model_file)
-    swat_model.agr_treshold = cal_config.agr_treshold
-    swat_model.hid_treshold = cal_config.hid_treshold
-    swat_model.swat_dir = cal_config.swat_dir
-    swat_model.temp_dir = cal_config.temp_run_dir
-    swat_model.output_dir = cal_config.temp_dir
-    swat_model.verbose = cal_config.verbose
+    swat_model.opt_hrus = cal_config.opt_hrus
+    swat_model.opt_subs = cal_config.opt_subs
+    swat_model.loc_const_1 = cal_config.loc_const_1
 
-    # prepare parameters to change
-    param_ref = cal_config.cal_param
-    param = {}
-    for j, key in enumerate(param_ref.keys()):
-        param[key] = [x[j], param_ref[key][1], param_ref[key][2]]
+    spatial_unit_ref = dic_hru_sub(swat_model)   
+    keysList = list(spatial_unit_ref.keys())
+    spatial_unit_opt = {}
 
-    # swat preparation
-    swat_model.swat_exec_name = cal_config.swat_exec_name
-    swat_model.param = param
+    g1 = fun_constraint1(swat_model, x)
 
-    # swat execution
-    simulated = run_single_model(swat_model, cal_config.out_var_rch, cal_config.out_var_sub, ind)
+    if g1 !=0: 
 
-    # objective function computation
+        for j, key in zip(range(0,len(x),7), enumerate(spatial_unit_ref.keys())):
+            spatial_unit_opt[key] = [x[j:j+7]]
 
-    q = simulated[0]
-    sm = simulated[1]
+        spatial_unit_opt = dict(zip(keysList, list(spatial_unit_opt.values())))
 
-    start_hid = ['1993-06-01 00:00:00', '1995-01-01 00:00:00', '1997-12-01 00:00:00', '2001-04-01 00:00:00', '2003-01-01 00:00:00', '2009-09-01 00:00:00',\
-        '2012-07-01 00:00:00', '2015-05-01 00:00:00']
+        for key in spatial_unit_opt.keys():
+            spatial_unit_opt[key] = [spatial_unit_opt[key][0], spatial_unit_ref[key][0]]
 
-    end_hid = ['1993-09-01 00:00:00', '1995-04-01 00:00:00', '1998-04-01 00:00:00', '2001-09-01 00:00:00', '2003-03-01 00:00:00', '2010-04-01 00:00:00',\
-        '2012-10-01 00:00:00', '2016-01-01 00:00:00']
+        f1 = float('nan')
+        f2 = float('nan')
 
-    start_agr = ['1993-05-01 00:00:00','1994-06-01 00:00:00','1994-11-01 00:00:00','1997-03-01 00:00:00', '2002-01-01 00:00:00','2003-04-01 00:00:00',\
-        '2003-12-01 00:00:00', '2006-11-01 00:00:00','2009-11-01 00:00:00','2012-05-01 00:00:00', '2014-07-01 00:00:00','1993-06-01 00:00:00',\
-        '1995-01-01 00:00:00', '1997-12-01 00:00:00','2001-04-01 00:00:00','2003-01-01 00:00:00', '2009-09-01 00:00:00','2012-07-01 00:00:00','2015-05-01 00:00:00']
+        f = [f1,f2]
 
-    end_agr = ['1993-09-01 00:00:00','1994-09-01 00:00:00','1995-03-01 00:00:00','1998-03-01 00:00:00', '2002-03-01 00:00:00','2003-06-01 00:00:00',\
-       '2004-05-01 00:00:00', '2007-03-01 00:00:00','2010-04-01 00:00:00','2012-10-01 00:00:00', '2016-01-01 00:00:00','1993-09-01 00:00:00',\
-       '1995-04-01 00:00:00', '1998-04-01 00:00:00','2001-09-01 00:00:00','2003-03-01 00:00:00', '2010-04-01 00:00:00','2012-10-01 00:00:00','2016-01-01 00:00:00']
+        f_out = {}
+        f_out['obj_1'] = f1
+        f_out['obj_2'] = f2
 
-    date_start_hid = [datetime.strptime(date, "%Y-%m-%d %H:%M:%S") for date in start_hid]
-    date_end_hid = [datetime.strptime(date, "%Y-%m-%d %H:%M:%S") for date in end_hid]
+    else:    
+        swat_model = swat_config.ModelSetup(cal_config.model_file)
+        swat_model.opt_hrus = cal_config.opt_hrus
+        swat_model.opt_subs = cal_config.opt_subs
+        swat_model.simulation_months = cal_config.simulation_months
+        swat_model.soils_awc = cal_config.soils_awc
+        swat_model.hid_treshold = cal_config.hid_treshold
+        swat_model.swat_dir = cal_config.swat_dir
+        swat_model.temp_dir = cal_config.temp_run_dir
+        swat_model.output_dir = cal_config.temp_dir
+        swat_model.verbose = cal_config.verbose
 
-    date_start_agr = [datetime.strptime(date, "%Y-%m-%d %H:%M:%S") for date in start_agr]
-    date_end_agr = [datetime.strptime(date, "%Y-%m-%d %H:%M:%S") for date in end_agr]
+        for j, key in zip(range(0,len(x),7), enumerate(spatial_unit_ref.keys())):
+            spatial_unit_opt[key] = [x[j:j+7]]
 
-    factor_list_agr = [0.06,0.06,0.06,0.2,0.06,0.06,0.1,0.06,0.06,0.1,0.2]
-    factor_list_hid = [0.1,0.1,0.1,0.1,0.1,0.2,0.1,0.2]
+        spatial_unit_opt = dict(zip(keysList, list(spatial_unit_opt.values())))
 
-    f1 = 0
-    f2 = 0
+        for key in spatial_unit_opt.keys():
+            spatial_unit_opt[key] = [spatial_unit_opt[key][0], spatial_unit_ref[key][0]]
 
-    for factor, datei, datef in zip(factor_list_hid, date_start_hid, date_end_hid):
-        f1 = f1 + factor*(sum([q_i['severity'].loc[datei:datef].sum() for q_i in q.values()]))
+        # swat preparation
+        swat_model.swat_exec_name = cal_config.swat_exec_name
+        swat_model.pdmm_param = cal_config.pdmm_param
+        swat_model.spatial_unit = spatial_unit_opt
 
-    for factor, datei, datef in zip(factor_list_agr, date_start_agr, date_end_agr):
-        f2 = f2 + factor*(sum([sm_i['severity'].loc[datei:datef].sum() for sm_i in sm.values()]))
+        # swat execution
+        simulated = run_single_model(swat_model, cal_config.out_var_agr, cal_config.out_var_hid, ind)
 
-    f = [f1,f2]
-    f_out = {}
-    f_out['obj_1'] = f1
-    f_out['obj_2'] = f2
+        # objective function computation
+        sm_defict = simulated[0]
+        q_deficit = simulated[1]
 
-    return f, f_out, param, simulated
+        f1 = 0
+        f2 = 0
 
-def run_single_model(swat_model, out_var_rch, out_var_sub, ind):
+        f1 = sum([sm_defict_i['sw_awc'].sum() for sm_defict_i in sm_defict.values()])
+        f2 = -1*sum([q_deficit_i['q_mm/d'].sum() for q_deficit_i in q_deficit.values()])
+
+        f = [f1,f2]
+        f_out = {}
+        f_out['obj_1'] = f1
+        f_out['obj_2'] = f2
+
+    return f, f_out, g1, spatial_unit_opt
+
+
+def run_single_model(swat_model, out_var_agr, out_var_hid, ind):
     # assigning ID to swat output folder
     swat_model.new_model_name = 'RUN{:04d}'.format(ind)
     # prepare SWAT run
@@ -256,154 +283,162 @@ def run_single_model(swat_model, out_var_rch, out_var_sub, ind):
     # execute model
     swat_model.run_swat()
     # get output time series of variables of interest
-    ts1 = get_rch_output(swat_model, out_var_rch)
-    ts2 = get_sub_output(swat_model, out_var_sub)
+    ts1 = get_hru_output(swat_model, out_var_agr)
+    ts2 = get_rch_output(swat_model, out_var_hid)
     simulated = [ts1, ts2]
     # remove temporal output folders
     swat_model.remove_swat()
 
     return simulated
 
-def get_sub_output(model, out_var):
+def get_hru_output(model, out_var_agr):
 
-    output_dir = model.output_dir + '/' + model.new_model_name + '/output.sub'
-    max_col1 = 35
-    max_col2 = 35
-    ns = 10
+    output_dir = model.output_dir + '/' + model.new_model_name + '/output.hru'
 
-    treshold_sm_df = get_sm_drought_treshold(model)
-    treshold_group_sub = treshold_sm_df.groupby('sub')
+    no_hru = 2500
+    results_years = 32
 
+    simulation_months = get_simulation_months(model)
+    soils_awc = get_soils_awc(model)
+
+    col_names = range(1,60)
     with open(output_dir) as f:
-        head = [next(f) for x in range(9)]
-        raw_header = head[8]
-        part1 = raw_header[:max_col1].split()
-        part2 = raw_header[max_col1:]
 
-        nvar = int(math.ceil((len(part2)-1)/ns))
-        part2 = [part2[int((i-1)*ns):int(i*ns)].strip() for i in range(1,nvar+1)]
+        df = pd.read_csv(f, names=col_names, sep='\s+',skiprows=9)
 
-        header = part1 + part2
+        df.reset_index(inplace=True)
+        df_f = df.filter(items =['level_0','level_1','level_12'])
 
-        reader = csv.reader(f)
-        buf = []
-        for line in reader:
-            part1 = [line[0][6:11], line[0][11:20], line[0][20:25], line[0][25:35]]
-            part1[-1] = '0' + part1[-1]
-            part1 = [x.strip() for x in part1]
-            part2 = line[0][max_col2:]
-            part2 = [float(part2[int((i-1)*ns):int(i*ns)].strip()) for i in range(1,nvar+1)]
-            line_list = part1 + part2
-            buf.append(line_list)
+    sm_list = []
+    for i in range(0,12*no_hru*results_years+(no_hru*results_years),(12*no_hru)+no_hru):
+        dfi = df_f.iloc[i:i+12*no_hru]
+    
+        sm_list.append(dfi)
+        sm_df = pd.concat(sm_list, axis=0, ignore_index=True)
 
-    raw = pd.DataFrame(data=buf, columns=header)
-    temp = raw.loc[raw['MON'].astype(float) < 13, :].copy()
-    temp['AREAkm2'] = temp['AREAkm2'].astype(float)
-    temp2 = raw.loc[raw['MON'].astype(float) > 1000, :].copy()
-    years = np.repeat(np.unique(temp2['MON']), 12)
+    sm_df = sm_df.rename(columns={'level_0':'lu', 'level_1':'hru' ,'level_12':'sw_mm'})
 
-    subbasins = np.sort(np.unique(temp['SUB']).astype(int))
+    sm_df['month'] = simulation_months['month']
+
+    sm_df['soil'] = soils_awc['soil']
+    sm_df['awc_mm'] = soils_awc['awc_mm']
+
+    land_use_water = ['UWB', 'WATER', 'VAR']
+    sm_df = sm_df[sm_df.soil.isin(land_use_water) == False]
+    sm_df['awc_mm'] = sm_df['awc_mm'].astype(int)
+
+    wet_months = [8,9,10,11]
+    sm_df = sm_df[sm_df.month.isin(wet_months) == False]
+
+    sm_df['sw_awc'] = abs(sm_df['awc_mm']-sm_df['sw_mm'])
 
     output = {}
-    for sub in subbasins:
+    sm_df_hru = sm_df.groupby('hru')
 
-        n = 23
-        treshold_sub = treshold_group_sub.get_group(sub)
-        treshold_sub_se = treshold_sub['treshold']
-        treshold_sub_se = pd.concat([treshold_sub_se]*n)
+    for name, group in sm_df_hru:
 
-        aux = temp.loc[temp['SUB'] == str(sub), :].copy()
-        aux['YEAR'] = years
-        aux.index = [dt.datetime(int(year),int(month),1) for year, month in zip(aux['YEAR'], aux['MON'])]
-
-        treshold_sub_se.index = [dt.datetime(int(year),int(month),1) for year, month in zip(aux['YEAR'], aux['MON'])]
-        aux['treshold'] = treshold_sub_se
-        aux['severity'] = np.where(aux['SWmm']<aux['treshold'], abs(aux['SWmm'] - aux['treshold']), 0)
-
-        output[str(sub)] = {'AREAkm2': aux['AREAkm2'][0], 'Series': aux.loc[:,out_var[0]], 'severity':aux.loc[:,out_var[1]]}
-
+        hru_df = group
+        output[str(name)] = {'Series':hru_df.loc[:,out_var_agr[0]], 'sw_awc':hru_df.loc[:,out_var_agr[1]]}
     return output
 
-def get_rch_output(model, out_var):
+def get_rch_output(model, out_var_hid):
 
     output_dir = model.output_dir + '/' + model.new_model_name + '/output.rch'
-    max_col1 = 37
-    max_col2 = 38
-    ns = 12
 
-    treshold_rc_df = get_rc_drought_treshold(model)
-    treshold_group_rch = treshold_rc_df.groupby('sub')
+    no_sub = 205
+    results_years = 32
+    treshold_rc_df = get_hid_drought_treshold(model)
 
+    col_names = range(1,60)
     with open(output_dir) as f:
-        head = [next(f) for x in range(9)]
-        raw_header = head[8]
-        part1 = raw_header[:max_col1].split()
-        part2 = raw_header[max_col1:]
+        
+        df = pd.read_csv(f, names=col_names, sep='\s+',skiprows=9)
+        df.reset_index(inplace=True)
+        df_f = df.filter([2, 4, 5, 6], axis=1)
 
-        nvar = int(math.ceil((len(part2)-1)/ns))
-        part2 = [part2[int((i-1)*ns):int(i*ns)].strip() for i in range(1,nvar+1)]
+    q_list = []
+    for i in range(0,12*no_sub*results_years+(no_sub*results_years),(12*no_sub)+no_sub):
+        dfi = df_f.iloc[i:i+12*no_sub]
+    
+        q_list.append(dfi)
+        q_df = pd.concat(q_list, axis=0, ignore_index=True)
 
-        header = part1 + part2
+    q_df = q_df.rename(columns={2: 'sub', 4: 'month', 5: 'area', 6:'q_m3/s'})
 
-        reader = csv.reader(f)
-        buf = []
-        for line in reader:
-            part1 = [line[0][6:11], line[0][11:20], line[0][20:26], line[0][26:38]]
-            part1 = [x.strip() for x in part1]
-            part2 = line[0][max_col2:]
-            part2 = [float(part2[int((i-1)*ns):int(i*ns)].strip()) for i in range(1,nvar+1)]
-            line_list = part1 + part2
-            buf.append(line_list)
+    q_df['q_mm/s'] = (q_df['q_m3/s']/(q_df['area']*1000000))*1000
+    q_df['q_mm/d'] = q_df['q_mm/s']*86400
 
-    raw = pd.DataFrame(data=buf, columns=header)
-    temp = raw.loc[raw['MON'].astype(float) < 13, :].copy()
-    temp['AREAkm2'] = temp['AREAkm2'].astype(float)
-    temp2 = raw.loc[raw['MON'].astype(float) > 1000, :].copy()
-    years = np.repeat(np.unique(temp2['MON']), 12)
-
-    temp['sf_mm/s'] = (temp['FLOW_OUTcms'] /(temp['AREAkm2']*1000000))*1000
-    temp['sf_mm/d'] = temp['sf_mm/s']*86400
-
-    subbasins = np.sort(np.unique(temp['RCH']).astype(int))
+    #q_df_aux = q_df.merge(treshold_rc_df, left_on=['sub','month'], right_on=['sub','month'])
+    #q_df_aux['severity'] =  abs(q_df_aux['treshold_mm/d']-q_df_aux['q_mm/d'])
 
     output = {}
-    for sub in subbasins:
+    q_df_sub = q_df.groupby('sub')
 
-        n = 23
-        treshold_rch = treshold_group_rch.get_group(sub)
-        treshold_rch_se = treshold_rch['treshold']
-        treshold_rch_se = pd.concat([treshold_rch_se]*n)
+    for name, group in q_df_sub:
 
-        aux = temp.loc[temp['RCH'] == str(sub), :].copy()
-        aux['YEAR'] = years
-        aux.index = [dt.datetime(int(year),int(month),1) for year, month in zip(aux['YEAR'], aux['MON'])]
-
-        treshold_rch_se.index = [dt.datetime(int(year),int(month),1) for year, month in zip(aux['YEAR'], aux['MON'])]
-        aux['treshold'] = treshold_rch_se
-        aux['severity'] = np.where(aux['sf_mm/d']<aux['treshold'], abs(aux['sf_mm/d'] - aux['treshold']), 0)
-
-        output[str(sub)] = {'AREAkm2': aux['AREAkm2'][0], 'Series': aux.loc[:, out_var[0]], 'severity':aux.loc[:,out_var[1]]}
-
+        sub_df = group
+        output[str(name)] = {'q_mm/d': sub_df.loc[:, out_var_hid[0]], 'q_mm/s':sub_df.loc[:, out_var_hid[1]]}
     return output
 
-def get_sm_drought_treshold(model):
+def get_simulation_months(model):
 
-    treshold_dir_sm = model.agr_treshold
-    col_names = ['gis','month','treshold','sub','drop']
-    treshold_sm = open(treshold_dir_sm)
+    simulation_months_dir = model.simulation_months
+    col_names = ['month']
+    simulation_month = open(simulation_months_dir)
 
-    treshold_sm_df = pd.read_csv(treshold_sm, names = col_names, delimiter= ',', skiprows=1)
-    treshold_sm_df['sub'] = treshold_sm_df['sub'].astype(int)
+    simulation_months_df = pd.read_csv(simulation_month, names = col_names, delimiter= ',', skiprows=1)
+    return simulation_months_df 
 
-    return treshold_sm_df
+def get_soils_awc(model):
 
-def get_rc_drought_treshold(model):
+    soils_awc_dir = model.soils_awc
+    col_names = ['soil','awc_mm']
+    soil_awc = open(soils_awc_dir)
 
-    treshold_dir_rc = model.hid_treshold
-    col_names = ['sub','month','treshold','drop1','drop2']
-    treshold_rc = open(treshold_dir_rc)
+    soils_awc_df = pd.read_csv(soil_awc, names = col_names, delimiter= ',', skiprows=1)
+    return soils_awc_df
 
-    treshold_rc_df = pd.read_csv(treshold_rc, names = col_names, delimiter= ',', skiprows=1)
+def get_hid_drought_treshold(model):
+
+    treshold_hid_dir = model.hid_treshold
+    col_names = ['sub','month','treshold_mm/d']
+    treshold_hid = open(treshold_hid_dir)
+
+    treshold_rc_df = pd.read_csv(treshold_hid, names = col_names, delimiter= ',', skiprows=1)
     treshold_rc_df['sub'] = treshold_rc_df['sub'].astype(int)
-
     return treshold_rc_df
+
+def dic_hru_sub(model):
+
+    opt_hrus_dir = model.opt_hrus
+    col_names = ['hru', 'soil']
+    opt_hrus = open(opt_hrus_dir)
+
+    opt_hrus_df = pd.read_csv(opt_hrus, names = col_names, delimiter= ',', skiprows=1, converters={'hru': str})
+    hrus, soil  = list(opt_hrus_df['hru']), list(opt_hrus_df['soil'])
+
+    hrus_dict = {z[0]: list(z[1:]) for z in zip(hrus, soil)}
+
+    opt_sub_dir = model.opt_subs
+    col_names = ['sub', 'ext']
+    opt_sub = open(opt_sub_dir)
+
+    opt_subs_df = pd.read_csv(opt_sub, names = col_names, delimiter= ',', skiprows=1)
+    subs, value  = list(opt_subs_df['sub']), list(opt_subs_df['ext'])
+
+    subs_dict = {z[0]: list(z[1:]) for z in zip(subs, value)}
+
+    spatial_unit_ref = {**hrus_dict, **subs_dict}
+    return spatial_unit_ref
+   
+def fun_constraint1(model, x):
+
+    const_dir = model.loc_const_1
+    const_file = open(const_dir)
+    loc_const = anp.genfromtxt(const_file, delimiter=';').flatten()
+
+    g1 = anp.sum(x*loc_const, axis=0)
+    return g1
+
+
+  
